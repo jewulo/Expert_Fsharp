@@ -19,7 +19,7 @@
             printfn "--> %d words in the text" numWords
             printfn "--> %d duplicate words" numDups
 
-        let run() = 
+        let run () = 
             let (numWords, numDups) = wordCount "All the king's horses and all the kings's men"
             showWordCount "Couldn't put Humpty together again"
 
@@ -50,7 +50,7 @@
             let n4 = n3 * 6
             n4
 
-        let run() = 
+        let run () = 
             printfn "%d" (powerOfFour 3)
             printfn "%d" (powerOfFourPlusTwo_1 3)
             printfn "%d" (powerOfFourPlusTwo_2 3)
@@ -67,7 +67,7 @@
         /// inp.Length is not resolvable due to a lack of enough type information
         //let length2 inp = inp.Length
 
-        let run() = 
+        let run () = 
             printfn "%A" sol1
             printfn "%A" sol2
             printfn "%A" sol3
@@ -85,7 +85,7 @@
 
         let showWordCount text = showResults (first_fsharp_program.wordCount text)
 
-        let run() =
+        let run () =
             printf "Show Word Count: "
             showWordCount "Couldn't put Humpty together again"
 
@@ -121,7 +121,7 @@
 
         let showWordCount text = showResults (first_fsharp_program.wordCount text)
 
-        let run() =
+        let run () =
             /// separinting sequencial code with a semicolon;
             /// the value is the last expression in the sequence
             let two = (printfn "Hello World"; 1 + 1)
@@ -183,7 +183,7 @@
         // <TargetFramework>net6.0-windows</TargetFramework>
         // <UseWindowsForms>true</UseWindowsForms>
     
-        let run() =
+        let run () =
             let form = new System.Windows.Forms.Form(Visible = true, TopMost = true, Text = "Welcome to F#")
             let textB = new System.Windows.Forms.RichTextBox(Dock = DockStyle.Fill, Text = "Here is some initial text") 
             form.Controls.Add textB
@@ -208,3 +208,17 @@
             let textC = new RichTextBox(Dock = DockStyle.Fill)
             form1.Controls.Add(textB)
             ()
+
+    module execute_module =
+        let run () =
+            printfn "[---- Expert F#: START CHAPTER 2 ----]"
+
+            first_fsharp_program.run()
+            understanding_scope.run()
+            using_properties_and_dot_notation.run()
+            using_tuples.run()
+            using_imperative_code.run()
+            using_object_oriented_libraries.run()
+
+            printfn "[---- Expert F#: END CHAPTER 2 ----]"
+            printfn ""

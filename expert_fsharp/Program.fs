@@ -14,24 +14,14 @@ let pause () =
         System.Console.ReadKey(true) |> ignore  
     | false -> ()  
 
-
-
 [<EntryPoint>]
 let main argv =
     printfn "Expert F#: Hello from main. Args: %A" argv
     
-    chapter_2.first_fsharp_program.run()
-    chapter_2.understanding_scope.run()
-    chapter_2.using_properties_and_dot_notation.run()
-    chapter_2.using_tuples.run()
-    chapter_2.using_imperative_code.run()
-    chapter_2.using_object_oriented_libraries.run()
-
-    chapter_3.simple_types_and_literals.run()
-    chapter_3.arithmetic_conversions.run()
-    chapter_3.simple_strings.run()
+    chapter_2.execute_module.run()
+    chapter_3.execute_module.run()
 
     System.Console.ReadKey(true) |> ignore  
-    pause ()  
+    pause()  
     0 // exit codeopen System
 
