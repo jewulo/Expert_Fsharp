@@ -1,4 +1,5 @@
-﻿namespace chapter_2
+module chapter_2
+
     module first_fsharp_program =
         /// Split a string into words at spaces
         let splitAtSpaces (text: string) =
@@ -209,7 +210,7 @@
             form1.Controls.Add(textB)
             ()
 
-    module execute_module =
+    module execute_modules =
         let run () =
             printfn "[---- Expert F#: START CHAPTER 2 ----]"
 
