@@ -5,18 +5,16 @@ open System
     /// Collection of code used in most examples in Chapter 3
     module http_stuff =
 
-        open System.Net.Http
-        open System.Threading.Tasks
+        open System.Net
 
         let delimiters  = [| ' '; '\n'; '\t'; '<'; '>'; '='|]
 
         let getWords (s: string) = s.Split delimiters
 
-        /// Get the contents of the URL via a web request using HttpClient (async)
+        /// Get the contents of the URL via a web request using WebClient (synchronous)
         let http (url: string) =
-            use client = new HttpClient()
-            let task: Task<string> = client.GetStringAsync(url)
-            task.Result
+            use client = new WebClient()
+            client.DownloadString(url)
 
         let fetch url = 
             try Some (http url)
@@ -306,8 +304,298 @@ open System
             generic_boxing_and_unboxing()
 
     module generic_binary_serialization_via_dotnet_libraries =
-         let run () = ()
-    
+
+        open System.IO
+        open System.Runtime.Serialization.Formatters.Binary
+
+        let writeValue outputStream (x : 'T) =
+            let formatter = new BinaryFormatter()
+            formatter.Serialize(outputStream, box x)
+
+        let readValue inputStream =
+            let formatter = new BinaryFormatter()
+            let res = formatter.Deserialize(inputStream)
+            unbox res
+
+        let run () =
+            let addresses =
+                Map.ofList ["Jeff", "123 Main Street, Redmond, WA 98052";
+                                     "Fred", "987 Pine Road, Phila., PA 19116";
+                                     "Mary", "PO Box 112233, Palo Alto, CA 94301"]
+
+            let fsOut = new FileStream("Data.dat", FileMode.Create)
+            writeValue fsOut addresses
+            fsOut.Close()
+            
+            let fsIn = new FileStream("Data.dat", FileMode.Open)
+            let res = readValue fsIn
+            res |> printfn "%A"
+            fsIn.Close() 
+
+    module generic_algorithms_through_explicit_arguments =
+
+        let rec hcf a b =
+            if a = 0 then b
+            elif a < b then hcf a (b - a)
+            else hcf (a - b) b
+
+        // a more generic version of hcf
+        let hcfGeneric (zero, sub, lessThan) =
+            let rec hcf a b =
+                if a = zero then b
+                elif lessThan a b then hcf a (sub b a)
+                else hcf (sub a b) b
+            hcf
+
+        let hcfInt = hcfGeneric (0, (-), (<))
+        let hcfInt64 = hcfGeneric (0L, (-), (<))
+        let hcfBigInt = hcfGeneric (0I, (-), (<))
+
+        let run () =
+            hcf 18 12 |> printfn "hcf (18 12) = %d"
+            hcfInt 18 12 |> printfn "hcfInt (18 12) = %d"
+            hcfInt 36 24 |> printfn "hcfInt (36 24) = %d"
+            hcfInt64 255486129 18612930 |> printfn "hcfInt64 (255486129 18612930) = %d"
+            hcfBigInt 1810287116162232383039576I 1239028178293092830480239032I |> printfn "hcfBigInt (18102871161223283039576I 1239028178293092830480239032I) = %O"
+
+    module generic_algorithms_through_function_parameters =
+
+        module via_record_types =
+
+            // define the generic record type
+            type Numeric<'T> =
+                {   Zero : 'T;
+                    Subtract : ('T -> 'T -> 'T);
+                    LessThan : ('T -> 'T -> bool);  }
+
+            // create record values
+            let intOps = {Zero = 0; Subtract = (-); LessThan = (<)}
+            let bigintOps = {Zero = 0I; Subtract = (-); LessThan = (<)}
+            let int64Ops = {Zero = 0L; Subtract = (-); LessThan = (<)}
+
+            // generic function via record values
+            let hcfGeneric (ops : Numeric<'T>) =
+                let rec hcf a b =
+                    if a = ops.Zero then b
+                    elif ops.LessThan a b then hcf a (ops.Subtract b a)
+                    else hcf (ops.Subtract a b) b
+                hcf
+
+            // define the specific function via record values
+            let hcfInt = hcfGeneric intOps
+            let hcfInt64 = hcfGeneric int64Ops
+            let hcfBigInt = hcfGeneric bigintOps
+
+            let run () =
+                printfn "[ Via Record Types: ]"
+                hcfInt 18 12 |> printfn "hcfInt (18 12) = %d"
+                hcfInt 36 24 |> printfn "hcfInt (36 24) = %d"
+                hcfInt64 255486129 18612930 |> printfn "hcfInt64 (255486129 18612930) = %d"
+                hcfBigInt 1810287116162232383039576I 1239028178293092830480239032I |> printfn "hcfBigInt (18102871161223283039576I 1239028178293092830480239032I) = %O"
+
+        module via_object_interface_types =
+
+            // define the generic interface type
+            type INumeric<'T> =
+                abstract Zero : 'T
+                abstract Subtract : 'T * 'T -> 'T;
+                abstract LessThan : 'T * 'T -> bool;
+
+            // define the specific inteface types
+            let intOps =
+                {   new INumeric<int> with 
+                        member ops.Zero = 0
+                        member ops.Subtract(x, y) = x - y
+                        member ops.LessThan(x, y) = x < y   }
+
+            let bigintOps =
+                {   new INumeric<bigint> with
+                        member ops.Zero = 0I
+                        member ops.Subtract(x, y) = x - y
+                        member ops.LessThan(x, y) = x < y   }
+
+            let int64Ops =
+                {   new INumeric<int64> with
+                        member ops.Zero = 0L
+                        member ops.Subtract(x, y) = x - y
+                        member ops.LessThan(x, y) = x < y   }
+
+            // generic function via interface type
+            let hcfGeneric (ops : INumeric<'T>) =
+                let rec hcf a b =
+                    if a = ops.Zero then b
+                    elif ops.LessThan(a, b) then hcf a (ops.Subtract(b, a))
+                    else hcf (ops.Subtract(a, b)) b
+                hcf
+
+            // specific function via interface type
+            let hcfInt = hcfGeneric intOps
+            let hcfInt64 = hcfGeneric int64Ops
+            let hcfBigInt = hcfGeneric bigintOps
+
+            let run () =
+                printfn "[ Via Object Interface Types: ]"
+                hcfInt 18 12 |> printfn "hcfInt (18 12) = %d"
+                hcfInt 36 24 |> printfn "hcfInt (36 24) = %d"
+                hcfInt64 255486129 18612930 |> printfn "hcfInt64 (255486129 18612930) = %d"
+                hcfBigInt 1810287116162232383039576I 1239028178293092830480239032I |> printfn "hcfBigInt (18102871161223283039576I 1239028178293092830480239032I) = %O"
+
+        let run () =
+            via_record_types.run()
+            via_object_interface_types.run()
+
+    module generic_algorithms_through_inlining =
+
+        let convertToFloat x = float x
+
+        // adding inline makes the code more generic
+        let inline convertToFloatAndAdd x y = float x + float y
+
+        // define the generic interface type
+        type INumeric<'T> =
+            abstract Zero : 'T
+            abstract Subtract : 'T * 'T -> 'T;
+            abstract LessThan : 'T * 'T -> bool;
+
+        // define the specific inteface types
+        let intOps =
+            {   new INumeric<int> with 
+                    member ops.Zero = 0
+                    member ops.Subtract(x, y) = x - y
+                    member ops.LessThan(x, y) = x < y   }
+
+        let bigintOps =
+            {   new INumeric<bigint> with 
+                    member ops.Zero = 0I
+                    member ops.Subtract(x, y) = x - y
+                    member ops.LessThan(x, y) = x < y   }
+
+        let int64Ops =
+            {   new INumeric<int64> with 
+                    member ops.Zero = 0L
+                    member ops.Subtract(x, y) = x - y
+                    member ops.LessThan(x, y) = x < y   }
+
+        // generic function via interface type
+        let hcfGeneric (ops : INumeric<'T>) =
+            let rec hcf a b =
+                if a = ops.Zero then b
+                elif ops.LessThan(a, b) then hcf a (ops.Subtract(b, a))
+                else hcf (ops.Subtract(a, b)) b
+            hcf
+
+        // redefine hcf as inline of hcfGeneric
+        let inline hcf a b =
+            hcfGeneric
+                {   new INumeric<'T> with
+                            member ops.Zero = LanguagePrimitives.GenericZero<'T>
+                            member ops.Subtract (x: 'T, y: 'T): 'T = x - y
+                            member ops.LessThan (x: 'T, y: 'T): bool = x < y    }
+                     a b
+
+        let run () =
+            printfn "[ Via Generic Type via Inlining: ]"
+            hcf 18 12 |> printfn "hcf (18 12) = %d"
+            hcf 36 24 |> printfn "hcf (36 24) = %d"
+            hcf 255486129 18612930 |> printfn "hcf (255486129 18612930) = %d"
+            hcf 1810287116162232383039576I 1239028178293092830480239032I |> printfn "hcfBigInt (18102871161223283039576I 1239028178293092830480239032I) = %O"
+
+    module understanding_subtyping =
+
+        let casting_up_statically () = 
+            let xint = 1    // an inter value type
+            let xobj = (1 :> obj)   // upcast an int value to an obj type
+            
+            xint.GetType() |> printfn "xint.GetType() = %A"
+            xobj.GetType() |> printfn "xobj.GetType() = %A"
+
+            let sstr = "abc"   // a string value type
+            let sobj = ("abc" :> obj)   // upcast a string value to an obj type
+            sstr.GetType() |> printfn "sstr.GetType() = %A"
+            sobj.GetType() |> printfn "sobj.GetType() = %A"
+
+        let casting_down_dynamically () =
+            let boxedObject = box "abc"
+            let downcastString = (boxedObject :?> string)
+            boxedObject.GetType() |> printfn "boxedObject.GetType() = %A"
+            downcastString.GetType() |> printfn "downcastString.GetType() = %A"
+
+            // an exception is thrown if the object is unsuitable to downcast to
+            let xobj = box 1
+            xobj.GetType() |> printfn "xobj.GetType() = %A"
+
+            // System.InvalidCastException
+            // HResult=0x80004002
+            // Message=Unable to cast object of type 'System.Int32' to type 'System.String'.
+            // Source=expert_fsharp
+            //let xstr = (xobj :?> string)
+            //xstr.GetType() |> printfn "xstr.GetType() = %A"
+
+        let run () =
+            casting_up_statically()
+            casting_down_dynamically()
+            
+
+    module performing_type_tests_via_pattern_matching =
+
+        let checkObject (x : obj) =
+            match x with
+            | :? string -> printfn "The object is a string"
+            | :? int -> printfn "The object is an integer"
+            | _ -> printfn "The input is something else"
+
+        let reportObject (x : obj) =
+            match x with
+            | :? string as s -> printfn "The input is the string '%s'" s
+            | :? int as d -> printfn "The input is the integer '%d'" d
+            | _ -> printfn "The input is something else"
+
+        let run () =
+            checkObject (box "abc") |> printfn "checkObject (box \"abc\") = %A"
+            checkObject (box 17) |> printfn "checkObject (box 17) = %A"
+            reportObject (box "abc") |> printfn "reportObject (box \"abc\") = %A"
+            reportObject (box 17) |> printfn "reportObject (box 17) = %A"
+
+    module knowing_when_upcasts_are_applied_automatically =
+        // Make Windows Forms usage optional to avoid FS0039 when Forms is not referenced.
+        open System
+        open System.IO
+
+        #if USE_WINDOWS_FORMS
+        open System.Windows.Forms
+
+        let setTextOfControl (c : Control) (s : string) = c.Text <- s
+
+        let run_forms () =
+            let form = new Form()
+            let textBox = new TextBox()
+            setTextOfControl form "Form Text"
+            setTextOfControl textBox "Text Box Text"
+        #else
+        // Fallback stubs when System.Windows.Forms is unavailable.
+        // These keep the module compiling without requiring the Forms assembly.
+        let setTextOfControl (_: obj) (_: string) = ()
+
+        let run_forms () = ()
+        #endif
+
+        let run_text_reader () =
+            let textReader1 =
+                if DateTime.Today.DayOfWeek = DayOfWeek.Monday
+                then Console.In
+                else File.OpenText("input.txt")
+
+            let textReader2 =
+                if DateTime.Today.DayOfWeek = DayOfWeek.Monday
+                then Console.In
+                else (File.OpenText("input.txt") :> TextReader)
+
+            (textReader1, textReader2)
+
+        let run () =
+            run_forms()
+            run_text_reader()
+
     module execute_modules =
 
         let run () =
@@ -322,5 +610,16 @@ open System
             writing_generics_functions.run()
             some_important_generic_functions.run()
             generic_binary_serialization_via_dotnet_libraries.run()
+            generic_algorithms_through_explicit_arguments.run()
+            generic_algorithms_through_function_parameters.run()
+            generic_algorithms_through_inlining.run()
+            understanding_subtyping.run()
+            performing_type_tests_via_pattern_matching.run()
+            knowing_when_upcasts_are_applied_automatically.run()
 
+            // continue from page 105
             printfn "[---- Expert F#: END CHAPTER 5 ----]"
+
+
+
+
