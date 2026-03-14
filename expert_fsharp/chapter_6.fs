@@ -302,12 +302,64 @@ module chapter_6
             p3 |> printfn "%A"
             p4 |> printfn "%A"
             
-
-    // CONTINUE FROM CHAPTER 6: PAGE 122
-    // DEFINING OBJECTS TYPES WITH MUTABLE STATE
     module defining_objects_with_mutable_state =
 
-        let run () = ()
+        type MutableVector2D(dx : float, dy : float) =
+            let mutable currDX = dx
+            let mutable currDY = dy
+
+            member vec.DX with get() = currDX and set v = currDX <- v
+            member vec.DY with get() = currDY and set v = currDY <- v
+
+            member vec.Length
+                with get() = sqrt (currDX * currDX + currDY * currDY)
+                and  set len =
+                    let theta = vec.Angle
+                    currDX <- cos theta * len
+                    currDY <- sin theta * len
+
+            member vec.Angle
+                with get() = atan2 currDY currDX
+                and  set theta =
+                    let len = vec.Length
+                    currDX <- cos theta * len
+                    currDY <- sin theta * len
+
+        let run_mutable_vector_2D () =
+            printfn "[---- Caluclate MutableVector2D ----]"
+            let v = MutableVector2D(3.0, 4.0)
+            (v.DX, v.DY) |> printfn "%A"
+            (v.Length, v.Angle) |> printfn "%A"
+            v.Angle <- System.Math.PI / 6.0
+            (v.DX, v.DY) |> printfn "%A"
+            (v.Length, v.Angle) |> printfn "%A"
+
+        type IntegerMatrix(rows : int, cols : int) =
+            let elems = Array2D.zeroCreate<int> rows cols
+
+            /// This defines an indexer property with getter and setter
+            /// the member t.Item is what creates the index property of
+            /// type IntegerMatrix.
+            member t.Item
+                with get (idx1, idx2) = elems.[idx1, idx2]
+                and  set (idx1, idx2) v = elems.[idx1, idx2] <- v
+
+        let run_integer_matrix () =
+            printfn "[---- use custom index ----]"
+            let mat2x2 = IntegerMatrix(2, 2)
+            mat2x2.[0, 0] <- 1
+            mat2x2.[0, 0] |> printfn "%d"
+            // see contents of none assigned array postion
+            mat2x2.[0, 1] |> printfn "%d"   // prints 0
+
+        let run () =
+            run_mutable_vector_2D()
+            run_integer_matrix()
+
+
+    // CONTINUE FROM CHAPTER 6: PAGE 124
+    // USING OPTIONAL PROPERTY SETTINGS
+
 
     module execute_modules =
 
